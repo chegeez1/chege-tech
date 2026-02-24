@@ -1,14 +1,85 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
-import { eq, desc } from "drizzle-orm";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { eq, desc, sql } from "drizzle-orm";
+import fs from "fs";
+import path from "path";
 import {
   transactions, customers, customerSessions, apiKeys,
   type Transaction, type InsertTransaction,
   type Customer, type CustomerSession, type ApiKey,
 } from "@shared/schema";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const db = drizzle(pool);
+const DB_DIR = path.join(process.cwd(), "data");
+const DB_PATH = path.join(DB_DIR, "database.sqlite");
+
+if (!fs.existsSync(DB_DIR)) {
+  fs.mkdirSync(DB_DIR, { recursive: true });
+}
+
+const sqlite = new Database(DB_PATH);
+sqlite.pragma("journal_mode = WAL");
+sqlite.pragma("foreign_keys = ON");
+
+const db = drizzle(sqlite);
+
+export function initializeDatabase() {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      reference TEXT UNIQUE NOT NULL,
+      plan_id TEXT NOT NULL,
+      plan_name TEXT NOT NULL,
+      customer_email TEXT NOT NULL,
+      customer_name TEXT,
+      amount INTEGER NOT NULL,
+      status TEXT DEFAULT 'pending',
+      email_sent INTEGER DEFAULT 0,
+      account_assigned INTEGER DEFAULT 0,
+      paystack_reference TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS customers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      name TEXT,
+      password_hash TEXT,
+      email_verified INTEGER DEFAULT 0,
+      verification_code TEXT,
+      verification_expires TEXT,
+      suspended INTEGER DEFAULT 0,
+      totp_secret TEXT,
+      totp_enabled INTEGER DEFAULT 0,
+      password_reset_code TEXT,
+      password_reset_expires TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS customer_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER NOT NULL,
+      token TEXT UNIQUE NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER,
+      key TEXT UNIQUE NOT NULL,
+      label TEXT NOT NULL,
+      active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+}
 
 export interface IStorage {
   createTransaction(data: InsertTransaction): Promise<Transaction>;
@@ -49,9 +120,11 @@ export class DbStorage implements IStorage {
   }
 
   async updateTransaction(reference: string, data: Partial<Transaction>): Promise<Transaction | undefined> {
+    const updateData: any = { ...data };
+    updateData.updatedAt = new Date().toISOString();
     const [result] = await db
       .update(transactions)
-      .set({ ...data, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(transactions.reference, reference))
       .returning();
     return result;
@@ -86,7 +159,7 @@ export class DbStorage implements IStorage {
       passwordHash: data.passwordHash,
       emailVerified: false,
       verificationCode: data.verificationCode,
-      verificationExpires: data.verificationExpires,
+      verificationExpires: data.verificationExpires.toISOString(),
     }).returning();
     return result;
   }
@@ -102,12 +175,23 @@ export class DbStorage implements IStorage {
   }
 
   async updateCustomer(id: number, data: Partial<Customer>): Promise<Customer | undefined> {
-    const [result] = await db.update(customers).set(data).where(eq(customers.id, id)).returning();
+    const updateData: any = { ...data };
+    if (updateData.verificationExpires instanceof Date) {
+      updateData.verificationExpires = updateData.verificationExpires.toISOString();
+    }
+    if (updateData.passwordResetExpires instanceof Date) {
+      updateData.passwordResetExpires = updateData.passwordResetExpires.toISOString();
+    }
+    const [result] = await db.update(customers).set(updateData).where(eq(customers.id, id)).returning();
     return result;
   }
 
   async createCustomerSession(customerId: number, token: string, expiresAt: Date): Promise<CustomerSession> {
-    const [result] = await db.insert(customerSessions).values({ customerId, token, expiresAt }).returning();
+    const [result] = await db.insert(customerSessions).values({
+      customerId,
+      token,
+      expiresAt: expiresAt.toISOString(),
+    }).returning();
     return result;
   }
 

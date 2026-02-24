@@ -1,61 +1,61 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, serial } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
 });
 
-export const transactions = pgTable("transactions", {
-  id: serial("id").primaryKey(),
-  reference: varchar("reference", { length: 255 }).unique().notNull(),
-  planId: varchar("plan_id", { length: 255 }).notNull(),
-  planName: varchar("plan_name", { length: 255 }).notNull(),
-  customerEmail: varchar("customer_email", { length: 255 }).notNull(),
-  customerName: varchar("customer_name", { length: 255 }),
+export const transactions = sqliteTable("transactions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  reference: text("reference").unique().notNull(),
+  planId: text("plan_id").notNull(),
+  planName: text("plan_name").notNull(),
+  customerEmail: text("customer_email").notNull(),
+  customerName: text("customer_name"),
   amount: integer("amount").notNull(),
-  status: varchar("status", { length: 50 }).default("pending"),
-  emailSent: boolean("email_sent").default(false),
-  accountAssigned: boolean("account_assigned").default(false),
-  paystackReference: varchar("paystack_reference", { length: 255 }),
-  createdAt: timestamp("created_at").default(sql`NOW()`),
-  updatedAt: timestamp("updated_at").default(sql`NOW()`),
+  status: text("status").default("pending"),
+  emailSent: integer("email_sent", { mode: "boolean" }).default(false),
+  accountAssigned: integer("account_assigned", { mode: "boolean" }).default(false),
+  paystackReference: text("paystack_reference"),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at").default(sql`(datetime('now'))`),
 });
 
-export const customers = pgTable("customers", {
-  id: serial("id").primaryKey(),
-  email: varchar("email", { length: 255 }).unique().notNull(),
-  name: varchar("name", { length: 255 }),
+export const customers = sqliteTable("customers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").unique().notNull(),
+  name: text("name"),
   passwordHash: text("password_hash"),
-  emailVerified: boolean("email_verified").default(false),
-  verificationCode: varchar("verification_code", { length: 10 }),
-  verificationExpires: timestamp("verification_expires"),
-  suspended: boolean("suspended").default(false),
+  emailVerified: integer("email_verified", { mode: "boolean" }).default(false),
+  verificationCode: text("verification_code"),
+  verificationExpires: text("verification_expires"),
+  suspended: integer("suspended", { mode: "boolean" }).default(false),
   totpSecret: text("totp_secret"),
-  totpEnabled: boolean("totp_enabled").default(false),
-  passwordResetCode: varchar("password_reset_code", { length: 10 }),
-  passwordResetExpires: timestamp("password_reset_expires"),
-  createdAt: timestamp("created_at").default(sql`NOW()`),
+  totpEnabled: integer("totp_enabled", { mode: "boolean" }).default(false),
+  passwordResetCode: text("password_reset_code"),
+  passwordResetExpires: text("password_reset_expires"),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
 });
 
-export const customerSessions = pgTable("customer_sessions", {
-  id: serial("id").primaryKey(),
+export const customerSessions = sqliteTable("customer_sessions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   customerId: integer("customer_id").notNull(),
-  token: varchar("token", { length: 512 }).unique().notNull(),
-  createdAt: timestamp("created_at").default(sql`NOW()`),
-  expiresAt: timestamp("expires_at").notNull(),
+  token: text("token").unique().notNull(),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+  expiresAt: text("expires_at").notNull(),
 });
 
-export const apiKeys = pgTable("api_keys", {
-  id: serial("id").primaryKey(),
+export const apiKeys = sqliteTable("api_keys", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   customerId: integer("customer_id"),
-  key: varchar("key", { length: 255 }).unique().notNull(),
-  label: varchar("label", { length: 255 }).notNull(),
-  active: boolean("active").default(true),
-  createdAt: timestamp("created_at").default(sql`NOW()`),
+  key: text("key").unique().notNull(),
+  label: text("label").notNull(),
+  active: integer("active", { mode: "boolean" }).default(true),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions).omit({

@@ -13,4 +13,7 @@ credentials-override.json
 custom-plans.json
 plan-overrides.json
 promo-codes.json
+data/database.sqlite
+data/database.sqlite-wal
+data/database.sqlite-shm
 .local/
