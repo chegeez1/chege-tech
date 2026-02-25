@@ -884,7 +884,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(409).json({ success: false, error: "An account with this email already exists" });
       }
 
-      const passwordHash = await bcrypt.hash(password, 12);
+      const passwordHash = await bcrypt.hash(password, 10);
       const verificationCode = generateVerificationCode();
       const verificationExpires = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -894,8 +894,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         await storage.createCustomer({ email, name, passwordHash, verificationCode, verificationExpires });
       }
 
-      await sendVerificationEmail(email, verificationCode, name).catch(() => {});
       res.json({ success: true, message: "Verification code sent to your email" });
+      sendVerificationEmail(email, verificationCode, name).catch(() => {});
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -965,8 +965,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const code = generateVerificationCode();
       const expires = new Date(Date.now() + 15 * 60 * 1000);
       await storage.updateCustomer(customer.id, { passwordResetCode: code, passwordResetExpires: expires });
-      await sendPasswordResetEmail(email, code, customer.name || undefined).catch(() => {});
       res.json({ success: true, message: "Reset code sent to your email" });
+      sendPasswordResetEmail(email, code, customer.name || undefined).catch(() => {});
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }
@@ -994,7 +994,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ success: false, error: "Reset code has expired. Please request a new one." });
       }
 
-      const passwordHash = await bcrypt.hash(newPassword, 12);
+      const passwordHash = await bcrypt.hash(newPassword, 10);
       await storage.updateCustomer(customer.id, {
         passwordHash,
         passwordResetCode: null,
@@ -1079,7 +1079,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         const valid = await bcrypt.compare(currentPassword, customer.passwordHash);
         if (!valid) return res.status(400).json({ success: false, error: "Current password is incorrect" });
         if (newPassword.length < 6) return res.status(400).json({ success: false, error: "New password must be at least 6 characters" });
-        updates.passwordHash = await bcrypt.hash(newPassword, 12);
+        updates.passwordHash = await bcrypt.hash(newPassword, 10);
       }
       if (Object.keys(updates).length === 0) return res.status(400).json({ success: false, error: "No changes provided" });
       const updated = await storage.updateCustomer(customer.id, updates);

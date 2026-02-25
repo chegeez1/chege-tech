@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Mail, Lock, User, ShieldCheck, ArrowLeft, Loader2, KeyRound, RotateCcw } from "lucide-react";
@@ -23,6 +23,65 @@ export default function Auth() {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => { if (cooldownRef.current) clearInterval(cooldownRef.current); };
+  }, []);
+
+  function startCooldown() {
+    setResendCooldown(60);
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) { if (cooldownRef.current) clearInterval(cooldownRef.current); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+
+  async function handleResendVerification() {
+    if (resendCooldown > 0) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, password }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Code resent!", description: "Check your email for a new verification code" });
+        startCooldown();
+      } else {
+        toast({ title: "Resend failed", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Connection failed", variant: "destructive" });
+    } finally { setLoading(false); }
+  }
+
+  async function handleResendResetCode() {
+    if (resendCooldown > 0) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Code resent!", description: "Check your email for a new reset code" });
+        startCooldown();
+      } else {
+        toast({ title: "Resend failed", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Connection failed", variant: "destructive" });
+    } finally { setLoading(false); }
+  }
 
   const switchMode = (m: Mode) => {
     setMode(m);
@@ -266,6 +325,18 @@ export default function Auth() {
               <NeonButton type="submit" loading={loading} testId="button-verify">
                 Verify Email
               </NeonButton>
+              <p className="text-center text-white/30 text-xs">
+                Didn't receive the code? Check your spam folder or{" "}
+                <button
+                  type="button"
+                  onClick={handleResendVerification}
+                  disabled={resendCooldown > 0 || loading}
+                  className="text-indigo-400 font-bold hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                  data-testid="button-resend-verify"
+                >
+                  {resendCooldown > 0 ? `resend (${resendCooldown}s)` : "resend"}
+                </button>
+              </p>
               <button type="button" onClick={() => switchMode("login")} className="w-full text-center text-white/40 text-sm hover:text-white/70 transition-colors mt-2">
                 Back to login
               </button>
@@ -335,14 +406,21 @@ export default function Auth() {
               <NeonButton type="submit" loading={loading} testId="button-reset-password">
                 Reset Password
               </NeonButton>
-              <div className="flex items-center justify-between mt-2">
-                <button type="button" onClick={() => switchMode("forgot")} className="text-white/40 text-sm hover:text-white/70 transition-colors">
-                  <RotateCcw className="w-3.5 h-3.5 inline mr-1" />Resend code
+              <p className="text-center text-white/30 text-xs">
+                Didn't receive the code? Check your spam folder or{" "}
+                <button
+                  type="button"
+                  onClick={handleResendResetCode}
+                  disabled={resendCooldown > 0 || loading}
+                  className="text-indigo-400 font-bold hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                  data-testid="button-resend-reset"
+                >
+                  {resendCooldown > 0 ? `resend (${resendCooldown}s)` : "resend"}
                 </button>
-                <button type="button" onClick={() => switchMode("login")} className="text-white/40 text-sm hover:text-white/70 transition-colors">
-                  <ArrowLeft className="w-3.5 h-3.5 inline mr-1" />Back to login
-                </button>
-              </div>
+              </p>
+              <button type="button" onClick={() => switchMode("login")} className="w-full text-center text-white/40 text-sm hover:text-white/70 transition-colors mt-2">
+                <ArrowLeft className="w-3.5 h-3.5 inline mr-1" />Back to login
+              </button>
             </form>
           )}
 

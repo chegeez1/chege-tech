@@ -69,10 +69,19 @@ export default function Dashboard() {
   const [totpError, setTotpError] = useState("");
 
   const customer = getCustomerData();
+  const isAuthenticated = !!getToken() && !!customer;
 
   useEffect(() => {
-    if (!getToken()) { setLocation("/auth"); }
-  }, []);
+    if (!isAuthenticated) { setLocation("/auth"); }
+  }, [isAuthenticated]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(140deg, #0b1020, #0d0724)" }}>
+        <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+      </div>
+    );
+  }
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery<any>({
     queryKey: ["/api/customer/orders"],

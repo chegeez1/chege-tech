@@ -2,7 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { initializeDatabase } from "./storage";
+import { initializeDatabase, storage } from "./storage";
 
 const app = express();
 const httpServer = createServer(app);
@@ -62,6 +62,11 @@ app.use((req, res, next) => {
 
 (async () => {
   initializeDatabase();
+
+  storage.deleteExpiredSessions().catch(() => {});
+  setInterval(() => {
+    storage.deleteExpiredSessions().catch(() => {});
+  }, 60 * 60 * 1000);
 
   await registerRoutes(httpServer, app);
 

@@ -157,9 +157,7 @@ export default function Store() {
       <header className="sticky top-0 z-50 glass-nav">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg glow-primary-sm">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
+            <img src="/favicon.png" alt="Chege Tech" className="w-9 h-9 rounded-xl shadow-lg" style={{ boxShadow: "0 0 14px rgba(99,102,241,0.3)" }} />
             <span className="font-bold text-lg hidden sm:block bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
               Chege Tech
             </span>
@@ -518,9 +516,7 @@ export default function Store() {
       <footer className="relative z-10 glass-nav border-t border-white/8 mt-8 py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
+            <img src="/favicon.png" alt="Chege Tech" className="w-8 h-8 rounded-xl" />
             <span className="font-bold text-white">Chege Tech</span>
           </div>
           <p className="text-sm text-white/40 mb-3">Affordable shared premium accounts with instant email delivery</p>

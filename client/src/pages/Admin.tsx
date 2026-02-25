@@ -81,9 +81,7 @@ export default function Admin() {
       <aside className="relative z-10 w-56 shrink-0 glass-nav border-r border-white/8 flex flex-col">
         <div className="p-4 border-b border-white/8">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg" style={{ boxShadow: "0 0 14px rgba(99,102,241,0.4)" }}>
-              <Shield className="w-4 h-4 text-white" />
-            </div>
+            <img src="/favicon.png" alt="Chege Tech" className="w-9 h-9 rounded-xl shadow-lg" style={{ boxShadow: "0 0 14px rgba(99,102,241,0.4)" }} />
             <div>
               <p className="font-bold text-sm text-white">Admin Panel</p>
               <p className="text-xs text-white/40">Premium Subs</p>
